@@ -11,6 +11,7 @@ class BubbleChartApp(QWidget):
     def __init__(self, df):
         super().__init__()
         self.df = df
+        self.colorbar = None  # Initialize colorbar as None
         self.initUI()
 
     def initUI(self):
@@ -95,15 +96,16 @@ class BubbleChartApp(QWidget):
         size_scaling_factor = self.size_slider.value()
         sizes_scaled = (valid_data[size_attr] - valid_data[size_attr].min()) / (valid_data[size_attr].max() - valid_data[size_attr].min()) * size_scaling_factor * 100 + 10
 
-        # Clear the previous plot
-        self.ax.clear()
+        # Clear the entire figure, including colorbars
+        self.fig.clear()
+        self.ax = self.fig.add_subplot(111)
 
         # Create the bubble chart with valid data
         scatter = self.ax.scatter(valid_data[x_attr], valid_data[y_attr], s=sizes_scaled, c=valid_data[color_attr], cmap='viridis', alpha=0.6, edgecolors="w", linewidth=0.5)
 
-        # Add color bar
-        cbar = self.fig.colorbar(scatter, ax=self.ax)
-        cbar.set_label(color_attr)
+        # Add a new colorbar
+        self.colorbar = self.fig.colorbar(scatter, ax=self.ax)
+        self.colorbar.set_label(color_attr)
 
         # Set axis labels and title
         self.ax.set_xlabel(x_attr)
@@ -113,11 +115,8 @@ class BubbleChartApp(QWidget):
         # Redraw the plot
         self.canvas.draw()
 
-
-
-
 if __name__ == '__main__':
-        # Set up argument parser
+    # Set up argument parser
     parser = argparse.ArgumentParser(description='Generate a bubble chart from a CSV dataset.')
     parser.add_argument('-i', '--input', type=str, required=True, help='Input CSV filename')
     args = parser.parse_args()
