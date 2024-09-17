@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 import argparse
 
 def create_bubble_chart(df):
@@ -15,8 +16,8 @@ def create_bubble_chart(df):
     max_val = df[size_attr].max()
     value_range = max_val - min_val 
 
-    min_size = 10 
-    max_size = 2000
+    min_size = 50 
+    max_size = 700  
     size_range = max_size - min_size 
     
     K = size_range / value_range 
@@ -25,7 +26,7 @@ def create_bubble_chart(df):
 
     plt.figure(figsize=(12, 8))
     
-    scatter = plt.scatter(x, y, s=sizes, c=colors, cmap='viridis', alpha=0.6, edgecolors="w", linewidth=0.5)
+    scatter = plt.scatter(x, y, s=sizes, c=colors, cmap='viridis', alpha=0.6, edgecolors="black", linewidth=0.5)
 
     cbar = plt.colorbar(scatter)
     cbar.set_label(color_attr)
@@ -34,14 +35,13 @@ def create_bubble_chart(df):
     legend_bubbles = [min_size + K * (s - min_val) for s in legend_sizes]
     
     for size, legend_bubble in zip(legend_sizes, legend_bubbles):
-        plt.scatter([], [], s=legend_bubble, c='gray', alpha=0.6, edgecolors="w", label=f'{size:.1e}')
+        plt.scatter([], [], s=legend_bubble, c='white', alpha=0.6, edgecolors="black", label=f'{size:.1e}')
     
-    plt.legend(scatterpoints=1, frameon=False, labelspacing=1, title='Population')
+    plt.legend(scatterpoints=1, frameon=True, labelspacing=1, title='Population')
 
-    plt.xlabel(x_attr)
-    plt.ylabel(y_attr)
-    plt.title(f'Bubble chart representation of {x_attr}, {y_attr}, {size_attr}, {color_attr}')
-    plt.grid(True)
+    plt.xlabel(x_attr, weight='bold')
+    plt.ylabel(y_attr, weight='bold')
+    plt.title(f'{x_attr}, {y_attr}, {size_attr}, {color_attr}', weight='bold')
 
     plt.show()
 
