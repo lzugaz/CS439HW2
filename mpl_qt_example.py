@@ -45,7 +45,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         layout.addWidget(NavigationToolbar(self.mpl_canvas, self), 0, 0, 1, 6)
         layout.addWidget(self.mpl_canvas,                          1, 0, 4, 4)
-        layout.addWidget(QLabel('Data selection'),                 1, 4, 1, 1)
+        layout.addWidget(QLabel('Data selection'),                   1, 4, 1, 1)
         layout.addWidget(self.dropdown,                            1, 5, 1, 1)
         layout.addWidget(QLabel('Line width'),                     2, 4, 1, 1)
         layout.addWidget(self.slider,                              2, 5, 1, 1)
