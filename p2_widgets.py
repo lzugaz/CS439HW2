@@ -1,132 +1,113 @@
 import sys
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import argparse
-from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QComboBox, QSlider, QLabel, QWidget
-from PyQt6.QtCore import Qt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+from PyQt6 import QtCore, QtWidgets
+from PyQt6.QtWidgets import QComboBox, QSlider, QLabel, QVBoxLayout, QHBoxLayout, QWidget
 
-class BubbleChartApp(QWidget):
-    def __init__(self, df):
+class BubbleChartApp(QtWidgets.QMainWindow):
+    def __init__(self, dataset):
         super().__init__()
-        self.df = df
-        self.colorbar = None  # Initialize colorbar as None
-        self.initUI()
 
-    def initUI(self):
-        layout = QVBoxLayout()
+        self.dataset = pd.read_csv(dataset)  
+        self.attributes = self.dataset.columns.tolist()  
+        self.main_widget = QWidget(self)
+        self.setCentralWidget(self.main_widget)
+        self.layout = QVBoxLayout(self.main_widget)
 
-        # Create matplotlib figure
-        self.fig, self.ax = plt.subplots(figsize=(10, 6))
-        self.canvas = FigureCanvas(self.fig)
+        self.canvas = FigureCanvas(Figure(figsize=(6, 6)))
+        self.ax = self.canvas.figure.subplots()
+        self.layout.addWidget(NavigationToolbar(self.canvas, self))
+        self.layout.addWidget(self.canvas)
 
-        # Dropdowns for selecting attributes
         self.x_dropdown = QComboBox(self)
         self.y_dropdown = QComboBox(self)
-        self.size_dropdown = QComboBox(self)
+        self.radius_dropdown = QComboBox(self)
         self.color_dropdown = QComboBox(self)
 
-        # Add items (column names from DataFrame) to dropdowns
-        self.columns = self.df.columns
-        for col in self.columns:
-            self.x_dropdown.addItem(col)
-            self.y_dropdown.addItem(col)
-            self.size_dropdown.addItem(col)
-            self.color_dropdown.addItem(col)
+        for attr in self.attributes:
+            self.x_dropdown.addItem(attr)
+            self.y_dropdown.addItem(attr)
+            self.radius_dropdown.addItem(attr)
+            self.color_dropdown.addItem(attr)
 
-        # Slider to control bubble size scaling
-        self.size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.size_slider = QSlider(QtCore.Qt.Orientation.Horizontal)
         self.size_slider.setMinimum(1)
         self.size_slider.setMaximum(100)
-        self.size_slider.setValue(50)  # Initial scaling factor
+        self.size_slider.setValue(10)
 
-        # Labels for the dropdowns
-        x_label = QLabel('X Axis:')
-        y_label = QLabel('Y Axis:')
-        size_label = QLabel('Size:')
-        color_label = QLabel('Color:')
-        slider_label = QLabel('Size Scaling:')
-
-        # Layout for the controls
         controls_layout = QHBoxLayout()
-        controls_layout.addWidget(x_label)
+        controls_layout.addWidget(QLabel('X-Axis:'))
         controls_layout.addWidget(self.x_dropdown)
-        controls_layout.addWidget(y_label)
+        controls_layout.addWidget(QLabel('Y-Axis:'))
         controls_layout.addWidget(self.y_dropdown)
-        controls_layout.addWidget(size_label)
-        controls_layout.addWidget(self.size_dropdown)
-        controls_layout.addWidget(color_label)
+        controls_layout.addWidget(QLabel('Radius:'))
+        controls_layout.addWidget(self.radius_dropdown)
+        controls_layout.addWidget(QLabel('Color:'))
         controls_layout.addWidget(self.color_dropdown)
+        controls_layout.addWidget(QLabel('Bubble Size Scale:'))
+        controls_layout.addWidget(self.size_slider)
 
-        layout.addLayout(controls_layout)
-        layout.addWidget(slider_label)
-        layout.addWidget(self.size_slider)
-        layout.addWidget(self.canvas)
+        self.layout.addLayout(controls_layout)
 
-        self.setLayout(layout)
-
-        # Connect dropdowns and slider to the update function
         self.x_dropdown.currentIndexChanged.connect(self.update_plot)
         self.y_dropdown.currentIndexChanged.connect(self.update_plot)
-        self.size_dropdown.currentIndexChanged.connect(self.update_plot)
+        self.radius_dropdown.currentIndexChanged.connect(self.update_plot)
         self.color_dropdown.currentIndexChanged.connect(self.update_plot)
         self.size_slider.valueChanged.connect(self.update_plot)
 
-        # Initial plot
         self.update_plot()
 
     def update_plot(self):
-        # Get selected values from dropdowns
         x_attr = self.x_dropdown.currentText()
         y_attr = self.y_dropdown.currentText()
-        size_attr = self.size_dropdown.currentText()
+        radius_attr = self.radius_dropdown.currentText()
         color_attr = self.color_dropdown.currentText()
+        
+        if not (x_attr and y_attr and radius_attr and color_attr):
+            print("Please select valid options for all fields.")
+            return
 
-        # Convert the selected columns to numeric, forcing errors to NaN
-        x = pd.to_numeric(self.df[x_attr], errors='coerce')
-        y = pd.to_numeric(self.df[y_attr], errors='coerce')
-        sizes = pd.to_numeric(self.df[size_attr], errors='coerce')
-        colors = pd.to_numeric(self.df[color_attr], errors='coerce')
+        size_scale = self.size_slider.value()
 
-        # Drop rows with NaN values in any of the selected columns
-        valid_data = pd.DataFrame({x_attr: x, y_attr: y, size_attr: sizes, color_attr: colors}).dropna()
+        self.canvas.figure.clf()  
+        self.ax = self.canvas.figure.add_subplot(111) 
 
-        # Apply size scaling based on slider
-        size_scaling_factor = self.size_slider.value()
-        sizes_scaled = (valid_data[size_attr] - valid_data[size_attr].min()) / (valid_data[size_attr].max() - valid_data[size_attr].min()) * size_scaling_factor * 100 + 10
+        x = pd.to_numeric(self.dataset[x_attr], errors='coerce')
+        y = pd.to_numeric(self.dataset[y_attr], errors='coerce')
+        radius = pd.to_numeric(self.dataset[radius_attr], errors='coerce')
+        color = pd.to_numeric(self.dataset[color_attr], errors='coerce')
 
-        # Clear the entire figure, including colorbars
-        self.fig.clear()
-        self.ax = self.fig.add_subplot(111)
+        x = x.fillna(0)
+        y = y.fillna(0)
+        radius = radius.fillna(1)  
+        color = color.fillna(0)
 
-        # Create the bubble chart with valid data
-        scatter = self.ax.scatter(valid_data[x_attr], valid_data[y_attr], s=sizes_scaled, c=valid_data[color_attr], cmap='viridis', alpha=0.6, edgecolors="w", linewidth=0.5)
+        scaled_radius = radius * size_scale / radius.max()  # Normalize and scale radius
 
-        # Add a new colorbar
-        self.colorbar = self.fig.colorbar(scatter, ax=self.ax)
-        self.colorbar.set_label(color_attr)
-
-        # Set axis labels and title
+        scatter = self.ax.scatter(x, y, s=scaled_radius, c=color, alpha=0.6, cmap='viridis')
         self.ax.set_xlabel(x_attr)
         self.ax.set_ylabel(y_attr)
-        self.ax.set_title("CIA Factbook 2023")
+        self.ax.set_title(f'Bubble Chart: {x_attr} vs {y_attr}')
 
-        # Redraw the plot
+        self.colorbar = self.canvas.figure.colorbar(scatter, ax=self.ax, label=color_attr)
+
+        self.canvas.figure.tight_layout()
+
         self.canvas.draw()
 
-if __name__ == '__main__':
-    # Set up argument parser
-    parser = argparse.ArgumentParser(description='Generate a bubble chart from a CSV dataset.')
-    parser.add_argument('-i', '--input', type=str, required=True, help='Input CSV filename')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Interactive Bubble Chart with PyQt6')
+    parser.add_argument('-i', '--input', type=str, required=True, help='Path to the input CSV file')
     args = parser.parse_args()
 
-    # Load the dataset from the CSV file
-    df = pd.read_csv(args.input)
+    app = QtWidgets.QApplication(sys.argv)
 
-    # Start the Qt application
-    app = QApplication(sys.argv)
-    main_window = BubbleChartApp(df)
-    main_window.setWindowTitle('Interactive Bubble Chart with PyQt6')
-    main_window.show()
+    window = BubbleChartApp(args.input)
+    window.show()
+
     sys.exit(app.exec())
