@@ -8,12 +8,14 @@ from matplotlib.figure import Figure
 from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtWidgets import QComboBox, QSlider, QLabel, QVBoxLayout, QHBoxLayout, QWidget
 
+import numpy as np
+
 class BubbleChartApp(QtWidgets.QMainWindow):
     def __init__(self, dataset):
         super().__init__()
 
-        self.dataset = pd.read_csv(dataset)  
-        self.attributes = self.dataset.columns.tolist()  
+        self.dataset = pd.read_csv(dataset)
+        self.attributes = self.dataset.columns.tolist()
         self.main_widget = QWidget(self)
         self.setCentralWidget(self.main_widget)
         self.layout = QVBoxLayout(self.main_widget)
@@ -66,15 +68,15 @@ class BubbleChartApp(QtWidgets.QMainWindow):
         y_attr = self.y_dropdown.currentText()
         radius_attr = self.radius_dropdown.currentText()
         color_attr = self.color_dropdown.currentText()
-        
+
         if not (x_attr and y_attr and radius_attr and color_attr):
             print("Please select valid options for all fields.")
             return
 
         size_scale = self.size_slider.value()
 
-        self.canvas.figure.clf()  
-        self.ax = self.canvas.figure.add_subplot(111) 
+        self.canvas.figure.clf()
+        self.ax = self.canvas.figure.add_subplot(111)
 
         x = pd.to_numeric(self.dataset[x_attr], errors='coerce')
         y = pd.to_numeric(self.dataset[y_attr], errors='coerce')
@@ -83,10 +85,10 @@ class BubbleChartApp(QtWidgets.QMainWindow):
 
         x = x.fillna(0)
         y = y.fillna(0)
-        radius = radius.fillna(1)  
+        radius = radius.fillna(1)
         color = color.fillna(0)
 
-        scaled_radius = radius * size_scale / radius.max()  # Normalize and scale radius
+        scaled_radius = radius * size_scale / radius.max()
 
         scatter = self.ax.scatter(x, y, s=scaled_radius, c=color, alpha=0.6, cmap='viridis')
         self.ax.set_xlabel(x_attr)
@@ -95,8 +97,17 @@ class BubbleChartApp(QtWidgets.QMainWindow):
 
         self.colorbar = self.canvas.figure.colorbar(scatter, ax=self.ax, label=color_attr)
 
-        self.canvas.figure.tight_layout()
+        max_val = radius.max()
+        min_val = radius.min()
+        legend_sizes = np.linspace(min_val, max_val, 3)  
+        legend_bubbles = legend_sizes * size_scale / max_val
 
+        for size, scaled_size in zip(legend_sizes, legend_bubbles):
+            self.ax.scatter([], [], s=scaled_size, c='white', alpha=0.6, label=f'{size:.1f}')
+
+        self.ax.legend(scatterpoints=1, frameon=True, labelspacing=1, title="Bubble Size", loc="upper right")
+
+        self.canvas.figure.tight_layout()
         self.canvas.draw()
 
 

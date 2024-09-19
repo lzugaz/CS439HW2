@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtWidgets import QComboBox, QSlider, QLabel, QVBoxLayout, QHBoxLayout, QWidget
 from matplotlib.widgets import RectangleSelector
-import matplotlib.gridspec as gridspec
+import numpy as np
 
 class Brush:
     def __init__(self, xs, ys, ax, callback, color='red', alpha=0.6, edgecolor='black'):
@@ -29,26 +29,20 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
 
         self.dataset = pd.read_csv(dataset)
         self.attributes = self.dataset.columns.tolist()
-
-        # Create a layout for the UI
         self.main_widget = QWidget(self)
         self.setCentralWidget(self.main_widget)
         self.layout = QVBoxLayout(self.main_widget)
 
-        # Two canvases for the two charts
         self.canvas1 = FigureCanvas(Figure(figsize=(6, 6)))
         self.ax1 = self.canvas1.figure.subplots()
 
         self.canvas2 = FigureCanvas(Figure(figsize=(6, 6)))
         self.ax2 = self.canvas2.figure.subplots()
-
-        # Add the charts to the layout
         chart_layout = QHBoxLayout()
         chart_layout.addWidget(NavigationToolbar(self.canvas1, self))
         chart_layout.addWidget(self.canvas1)
         chart_layout.addWidget(NavigationToolbar(self.canvas2, self))
         chart_layout.addWidget(self.canvas2)
-
         self.layout.addLayout(chart_layout)
 
         # Controls for Chart 1
@@ -60,8 +54,9 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.color_dropdown1 = self.add_dropdown(self.controls_layout1)
         self.size_slider1 = self.add_slider(self.controls_layout1)
         self.layout.addLayout(self.controls_layout1)
+        
 
-        # Controls for Chart 2
+
         self.controls_layout2 = QHBoxLayout()
         self.controls_layout2.addWidget(QLabel('Chart 2:'))
         self.x_dropdown2 = self.add_dropdown(self.controls_layout2)
@@ -71,7 +66,6 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.size_slider2 = self.add_slider(self.controls_layout2)
         self.layout.addLayout(self.controls_layout2)
 
-        # Populate dropdowns with attributes
         for attr in self.attributes:
             self.x_dropdown1.addItem(attr)
             self.y_dropdown1.addItem(attr)
@@ -179,7 +173,7 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
 
         # Plot chart 1: gray for non-selected points, original colors for selected points
         self.ax1.scatter(x1[~selected_mask1], y1[~selected_mask1], s=scaled_radius1[~selected_mask1],
-                        c='gray', alpha=0.4)
+                         c='gray', alpha=0.4)
         scatter1 = self.ax1.scatter(x1[selected_mask1], y1[selected_mask1], s=scaled_radius1[selected_mask1],
                                     c=color1[selected_mask1], alpha=0.6, cmap='viridis')
         self.ax1.set_xlabel(x_attr1)
@@ -187,15 +181,33 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.ax1.set_title(f'Bubble Chart 1: {x_attr1} vs {y_attr1}')
         self.colorbar1 = self.canvas1.figure.colorbar(scatter1, ax=self.ax1, label=color_attr1)
 
+        # Add dynamic legend for bubble sizes in chart 1
+        max_val1 = radius1.max()
+        min_val1 = radius1.min()
+        legend_sizes1 = np.linspace(min_val1, max_val1, 3)  # Three representative sizes
+        legend_bubbles1 = legend_sizes1 * size_scale1 / max_val1
+        for size, scaled_size in zip(legend_sizes1, legend_bubbles1):
+            self.ax1.scatter([], [], s=scaled_size, c='gray', alpha=0.6, label=f'{size:.1f}')
+        self.ax1.legend(scatterpoints=1, frameon=True, labelspacing=1, title="Bubble Size", loc="upper right")
+
         # Plot chart 2: gray for non-selected points, original colors for selected points
         self.ax2.scatter(x2[~selected_mask2], y2[~selected_mask2], s=scaled_radius2[~selected_mask2],
-                        c='gray', alpha=0.4)
+                         c='gray', alpha=0.4)
         scatter2 = self.ax2.scatter(x2[selected_mask2], y2[selected_mask2], s=scaled_radius2[selected_mask2],
                                     c=color2[selected_mask2], alpha=0.6, cmap='viridis')
         self.ax2.set_xlabel(x_attr2)
         self.ax2.set_ylabel(y_attr2)
         self.ax2.set_title(f'Bubble Chart 2: {x_attr2} vs {y_attr2}')
         self.colorbar2 = self.canvas2.figure.colorbar(scatter2, ax=self.ax2, label=color_attr2)
+
+        # Add dynamic legend for bubble sizes in chart 2
+        max_val2 = radius2.max()
+        min_val2 = radius2.min()
+        legend_sizes2 = np.linspace(min_val2, max_val2, 3)  # Three representative sizes
+        legend_bubbles2 = legend_sizes2 * size_scale2 / max_val2
+        for size, scaled_size in zip(legend_sizes2, legend_bubbles2):
+            self.ax2.scatter([], [], s=scaled_size, c='gray', alpha=0.6, label=f'{size:.1f}')
+        self.ax2.legend(scatterpoints=1, frameon=True, labelspacing=1, title="Bubble Size", loc="upper right")
 
         # Recreate the RectangleSelector for both axes
         if hasattr(self, 'selector1'):
