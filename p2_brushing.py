@@ -16,12 +16,13 @@ class Brush:
         self.callback = callback
         self.ax = ax
         self.rec = RectangleSelector(ax, self.onselect, useblit=True, interactive=True)
-    
+
     def onselect(self, eclick, erelease):
+        # Get the coordinates of the selected region
         x1, y1 = eclick.xdata, eclick.ydata
         x2, y2 = erelease.xdata, erelease.ydata
         selected = self.df[(self.df['x'].between(x1, x2)) & (self.df['y'].between(y1, y2))]
-        self.callback(selected.index.tolist())
+        self.callback(selected.index.tolist())  # Call the callback with the selected indices
 
 class LinkedBubbleChartApp(QtWidgets.QMainWindow):
     def __init__(self, dataset):
@@ -54,9 +55,8 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.color_dropdown1 = self.add_dropdown(self.controls_layout1)
         self.size_slider1 = self.add_slider(self.controls_layout1)
         self.layout.addLayout(self.controls_layout1)
-        
 
-
+        # Controls for Chart 2
         self.controls_layout2 = QHBoxLayout()
         self.controls_layout2.addWidget(QLabel('Chart 2:'))
         self.x_dropdown2 = self.add_dropdown(self.controls_layout2)
@@ -91,8 +91,8 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.size_slider2.valueChanged.connect(self.update_plot)
 
         # Initialize linked brushing for both charts
-        self.brush1 = Brush([], [], self.ax1, self.brush_callback)
-        self.brush2 = Brush([], [], self.ax2, self.brush_callback)
+        self.brush1 = None
+        self.brush2 = None
 
         # Track selected indices for brushing
         self.selected_indices = []
@@ -181,15 +181,6 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.ax1.set_title(f'Bubble Chart 1: {x_attr1} vs {y_attr1}')
         self.colorbar1 = self.canvas1.figure.colorbar(scatter1, ax=self.ax1, label=color_attr1)
 
-        # Add dynamic legend for bubble sizes in chart 1
-        max_val1 = radius1.max()
-        min_val1 = radius1.min()
-        legend_sizes1 = np.linspace(min_val1, max_val1, 3)  # Three representative sizes
-        legend_bubbles1 = legend_sizes1 * size_scale1 / max_val1
-        for size, scaled_size in zip(legend_sizes1, legend_bubbles1):
-            self.ax1.scatter([], [], s=scaled_size, c='gray', alpha=0.6, label=f'{size:.1f}')
-        self.ax1.legend(scatterpoints=1, frameon=True, labelspacing=1, title="Bubble Size", loc="upper right")
-
         # Plot chart 2: gray for non-selected points, original colors for selected points
         self.ax2.scatter(x2[~selected_mask2], y2[~selected_mask2], s=scaled_radius2[~selected_mask2],
                          c='gray', alpha=0.4)
@@ -200,23 +191,14 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.ax2.set_title(f'Bubble Chart 2: {x_attr2} vs {y_attr2}')
         self.colorbar2 = self.canvas2.figure.colorbar(scatter2, ax=self.ax2, label=color_attr2)
 
-        # Add dynamic legend for bubble sizes in chart 2
-        max_val2 = radius2.max()
-        min_val2 = radius2.min()
-        legend_sizes2 = np.linspace(min_val2, max_val2, 3)  # Three representative sizes
-        legend_bubbles2 = legend_sizes2 * size_scale2 / max_val2
-        for size, scaled_size in zip(legend_sizes2, legend_bubbles2):
-            self.ax2.scatter([], [], s=scaled_size, c='gray', alpha=0.6, label=f'{size:.1f}')
-        self.ax2.legend(scatterpoints=1, frameon=True, labelspacing=1, title="Bubble Size", loc="upper right")
+        # Recreate the RectangleSelector for both axes after plot update
+        if self.brush1:
+            self.brush1.rec.disconnect_events()
+        self.brush1 = Brush(x1, y1, self.ax1, self.brush_callback)
 
-        # Recreate the RectangleSelector for both axes
-        if hasattr(self, 'selector1'):
-            self.selector1.disconnect_events()  # Disconnect old events
-        self.selector1 = RectangleSelector(self.ax1, self.on_select_chart1, useblit=True, interactive=True)
-
-        if hasattr(self, 'selector2'):
-            self.selector2.disconnect_events()  # Disconnect old events
-        self.selector2 = RectangleSelector(self.ax2, self.on_select_chart2, useblit=True, interactive=True)
+        if self.brush2:
+            self.brush2.rec.disconnect_events()
+        self.brush2 = Brush(x2, y2, self.ax2, self.brush_callback)
 
         # Adjust layout to avoid overlap
         self.canvas1.figure.tight_layout()
@@ -253,6 +235,7 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
 
         self.selected_indices = selected.index.tolist()  # Save selected indices
         self.update_plot()  # Update the plot to reflect the selection
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Linked Brushing Bubble Charts')
