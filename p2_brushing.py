@@ -114,7 +114,8 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         self.brush1 = None
         self.brush2 = None
 
-        self.selected_indices = []
+        self.selected_indices_chart1 = []
+        self.selected_indices_chart2 = []
 
         self.update_plot()
 
@@ -132,8 +133,12 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         layout.addWidget(slider)
         return slider
 
-    def brush_callback(self, selected):
-        self.selected_indices = selected
+    def brush_callback_chart1(self, selected):
+        self.selected_indices_chart1 = selected
+        self.update_plot()
+
+    def brush_callback_chart2(self, selected):
+        self.selected_indices_chart2 = selected
         self.update_plot()
 
     def update_plot(self):
@@ -179,10 +184,22 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         legend_bubbles1 = legend_sizes1 * size_scale1 / max_val1
 
         for size, scaled_size in zip(legend_sizes1, legend_bubbles1):
-            self.ax1.scatter([], [], s=scaled_size, c='white', alpha=0.6, label=f'{size:.1f}')
+            self.ax1.scatter([], [], s=scaled_size, c='gray', alpha=0.6, label=f'{size:.1f}')
 
         self.ax1.legend(scatterpoints=1, frameon=True, labelspacing=1, title="Bubble Size", loc="upper right")
 
+        if self.selected_indices_chart1:
+            selected_mask1 = np.zeros_like(x1, dtype=bool)
+            selected_mask1[self.selected_indices_chart1] = True
+        else:
+            selected_mask1 = np.ones_like(x1, dtype=bool)
+
+        # If there are selected indices for chart 2, use them to highlight data points
+        if self.selected_indices_chart2:
+            selected_mask2 = np.zeros_like(x2, dtype=bool)
+            selected_mask2[self.selected_indices_chart2] = True
+        else:
+            selected_mask2 = np.ones_like(x2, dtype=bool)
         
         max_val2 = radius2.max()
         min_val2 = radius2.min()
@@ -190,18 +207,10 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
         legend_bubbles2 = legend_sizes2 * size_scale2 / max_val2
 
         for size, scaled_size in zip(legend_sizes2, legend_bubbles2):
-            self.ax2.scatter([], [], s=scaled_size, c='white', alpha=0.6, label=f'{size:.1f}')
+            self.ax2.scatter([], [], s=scaled_size, c='gray', alpha=0.6, label=f'{size:.1f}')
 
         self.ax2.legend(scatterpoints=1, frameon=True, labelspacing=1, title="Bubble Size", loc="upper right")
 
-        if self.selected_indices:
-            selected_mask1 = np.zeros_like(x1, dtype=bool)
-            selected_mask1[self.selected_indices] = True
-            selected_mask2 = np.zeros_like(x2, dtype=bool)
-            selected_mask2[self.selected_indices] = True
-        else:
-            selected_mask1 = np.ones_like(x1, dtype=bool)
-            selected_mask2 = np.ones_like(x2, dtype=bool)
 
         self.ax1.scatter(x1[~selected_mask1], y1[~selected_mask1], s=scaled_radius1[~selected_mask1],
                          c='gray', alpha=0.4)
@@ -223,11 +232,11 @@ class LinkedBubbleChartApp(QtWidgets.QMainWindow):
 
         if self.brush1:
             self.brush1.rec.disconnect_events()
-        self.brush1 = Brush(x1, y1, self.ax1, self.brush_callback, self.canvas1)
+        self.brush1 = Brush(x1, y1, self.ax1, self.brush_callback_chart1, self.canvas1)
 
         if self.brush2:
             self.brush2.rec.disconnect_events()
-        self.brush2 = Brush(x2, y2, self.ax2, self.brush_callback, self.canvas2)
+        self.brush2 = Brush(x2, y2, self.ax2, self.brush_callback_chart2, self.canvas2)
 
         self.canvas1.figure.tight_layout()
         self.canvas2.figure.tight_layout()
