@@ -42,11 +42,11 @@ class BubbleChartApp(QtWidgets.QMainWindow):
         self.size_slider.setValue(10)
 
         controls_layout = QHBoxLayout()
-        controls_layout.addWidget(QLabel('X-Axis:'))
+        controls_layout.addWidget(QLabel('X:'))
         controls_layout.addWidget(self.x_dropdown)
-        controls_layout.addWidget(QLabel('Y-Axis:'))
+        controls_layout.addWidget(QLabel('Y:'))
         controls_layout.addWidget(self.y_dropdown)
-        controls_layout.addWidget(QLabel('Radius:'))
+        controls_layout.addWidget(QLabel('Size:'))
         controls_layout.addWidget(self.radius_dropdown)
         controls_layout.addWidget(QLabel('Color:'))
         controls_layout.addWidget(self.color_dropdown)
@@ -60,7 +60,7 @@ class BubbleChartApp(QtWidgets.QMainWindow):
         self.radius_dropdown.currentIndexChanged.connect(self.update_plot)
         self.color_dropdown.currentIndexChanged.connect(self.update_plot)
         self.size_slider.valueChanged.connect(self.update_plot)
-
+        
         self.update_plot()
 
     def update_plot(self):
